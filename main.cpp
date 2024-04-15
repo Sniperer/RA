@@ -4,21 +4,21 @@ using namespace std;
 using namespace chrono;
 typedef long long ll;
 
-const int p = ((uint64_t)1)<<31-1;
+const int p = (((uint64_t)1)<<31)-1;
 const int q=31;
 
 class hash_family{
 public:
     virtual void update(uint64_t i, uint64_t value)=0;
-
+  hash_family(){}
+  ~hash_family(){}
 };
 
-
+vector<vector<pair<uint64_t,uint64_t>>> chaining(p);
 
 class hash_with_chain:public hash_family{
 public:
     uint64_t a;
-    vector<unordered_map<uint64_t,uint64_t>> chaining;
     hash_with_chain() {
         do {
             a = rand() % p;
@@ -30,28 +30,26 @@ public:
     }
     void update(uint64_t i, uint64_t value){
         int k= hash_f1(i);
-        unordered_map<uint64_t,uint64_t>::iterator it;
-        for(it = chaining[k].begin();it!=chaining[k].end();it++){
+         for(auto it = chaining[k].begin();it!=chaining[k].end();it++){
             if(it->first==i) {
                 it->second += value;
                 return;
             }
         }
-        chaining[k][i]=value;
+	 chaining[k].push_back({i,value});
     }
 
     uint64_t Query() {
       uint64_t total = 0;
         for (int i = 0; i < chaining.size(); i++) {
-            unordered_map<uint64_t, uint64_t>::iterator it;
-            for (it = chaining[i].begin(); it != chaining[i].end(); it++) {
+            for (auto it = chaining[i].begin(); it != chaining[i].end(); it++) {
                 total += it->second * it->second;
             }
         }
         return total;
     }
   ~hash_with_chain() {
-
+    chaining.clear();
   }
 };
 
@@ -120,15 +118,19 @@ public:
     for(int i = (1<<6); i <= (1<<28); i=i*2) {
       vector<hash_family*> v;
       cerr << 1 << endl;
-      v.push_back(new hash_with_chain());
+      hash_with_chain v0;
       cerr << 2 << endl;
-      v.push_back(new four_wise_hash((uint64_t)(1<<7)));
+      four_wise_hash v1((uint64_t)(1<<7));
       cerr << 3 << endl;
-      v.push_back(new four_wise_hash((uint64_t)(1<<10)));
+      four_wise_hash v2((uint64_t)(1<<10));
       cerr << 4 << endl;
-      v.push_back(new four_wise_hash((uint64_t)(1<<20)));
+      four_wise_hash v3((uint64_t)(1<<20));
       for(int j = 0; j < v.size(); ++j) {
-	hash_family* ptr = v[j];
+	hash_family* ptr;
+	if(j==0) ptr = &v0;
+	else if(j==1) ptr = &v1;
+	else if(j==2) ptr = &v2;
+	else ptr = &v3;
 	auto start = system_clock::now();
 	for(int k=1; k<=1000000; ++k) {
 	  if(k%10000000==0)
@@ -137,12 +139,9 @@ public:
 	}
 	auto end = system_clock::now();
 	auto dur = duration_cast<microseconds>(end-start);
-	cout << double(dur.count()) * microseconds::period::num / microseconds::period::den << " ";	
+	cout << double(dur.count()) * microseconds::period::num / microseconds::period::den << ",";	
       }
       cout << endl;
-      for(int j = 0; j < v.size(); ++j) {
-	delete v[j];
-      }
     }
   }
 };
